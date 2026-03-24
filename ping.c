@@ -4,7 +4,9 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/ip_icmp.h>
+#include <memory.h>
 
+#define PACKET_SIZE 64
 
 int main(int argc , char *argv[]){
 
@@ -32,6 +34,22 @@ int main(int argc , char *argv[]){
 
     printf("Raw Socket Created Successfully\n");
     printf("Target IP : %s\n", target_ip);
+
+    char packet[PACKET_SIZE];
+    memset(packet,0,sizeof(packet));
+
+    struct icmphdr *icmp = (struct icmphdr*) packet;
+
+    icmp->type = 8;
+    icmp->code = 0;
+    icmp->checksum = 0;
+    icmp->un.echo.id = getpid();
+    icmp->un.echo.sequence = 0;
+
+    char *data = packet + sizeof(struct icmphdr);
+    strcpy(data, "Hello Ping");
+
+    printf("ICMP Packet Created successfully\n");
 
     return 0;
 }
