@@ -53,9 +53,10 @@ int main(int argc , char *argv[]){
     icmp->un.echo.id = getpid();
     icmp->un.echo.sequence = sequence++;
 
+    icmp->checksum = compute_checksum(packet,PACKET_SIZE);
+
     char *data = packet + sizeof(struct icmphdr);
 
-    icmp->checksum = compute_checksum(packet,PACKET_SIZE);
 
     // insert timestamp
     struct timeval *time_sent = (struct timeval *) data;
@@ -68,8 +69,17 @@ int main(int argc , char *argv[]){
     // struct timeval
     // Padding (A's)
 
+    // sending icmp packet
+
+    ssize_t bytes_sent = sendto(sockfd,packet,PACKET_SIZE,0,(struct sockaddr*)&dest_addr,sizeof(dest_addr));
+    if(bytes_sent < 0){
+        perror("sento failed");
+        return 1;
+    }
+
     printf("ICMP Packet Prepared (Header + Timestamp + PAyload)\n");
     printf("Checksum Calculated: 0x%x \n", icmp->checksum);
+    printf("Packet sent successfully (%ld bytes)\n", bytes_sent);
 
     return 0;
 }
