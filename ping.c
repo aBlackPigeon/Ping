@@ -5,8 +5,10 @@
 #include <sys/socket.h>
 #include <netinet/ip_icmp.h>
 #include <memory.h>
+#include <sys/time.h>
 
 #define PACKET_SIZE 64
+#define DATA_SIZE (PACKET_SIZE - sizeof(struct icmphdr))
 
 int main(int argc , char *argv[]){
 
@@ -35,21 +37,35 @@ int main(int argc , char *argv[]){
     printf("Raw Socket Created Successfully\n");
     printf("Target IP : %s\n", target_ip);
 
+    // ip Packet
+
     char packet[PACKET_SIZE];
     memset(packet,0,sizeof(packet));
 
     struct icmphdr *icmp = (struct icmphdr*) packet;
 
+    static int sequence = 1;
+
     icmp->type = 8;
     icmp->code = 0;
     icmp->checksum = 0;
     icmp->un.echo.id = getpid();
-    icmp->un.echo.sequence = 0;
+    icmp->un.echo.sequence = sequence++;
 
     char *data = packet + sizeof(struct icmphdr);
-    strcpy(data, "Hello Ping");
+    
+    // insert timestamp
+    struct timeval *time_sent = (struct timeval *) data;
+    gettimeofday(time_sent,NULL);
 
-    printf("ICMP Packet Created successfully\n");
+    // filling payload
+    memset(data + sizeof(struct timeval), 'A', DATA_SIZE - sizeof(struct timeval));
+    // packet look liks
+    // ICMP HEADER
+    // struct timeval
+    // Padding (A's)
+
+    printf("ICMP Packet Prepared (Header + Timestamp + PAyload)\n");
 
     return 0;
 }
