@@ -6,6 +6,7 @@
 #include <netinet/ip_icmp.h>
 #include <memory.h>
 #include <sys/time.h>
+#include "include/checksum.h"
 
 #define PACKET_SIZE 64
 #define DATA_SIZE (PACKET_SIZE - sizeof(struct icmphdr))
@@ -53,7 +54,9 @@ int main(int argc , char *argv[]){
     icmp->un.echo.sequence = sequence++;
 
     char *data = packet + sizeof(struct icmphdr);
-    
+
+    icmp->checksum = compute_checksum(packet,PACKET_SIZE);
+
     // insert timestamp
     struct timeval *time_sent = (struct timeval *) data;
     gettimeofday(time_sent,NULL);
@@ -66,6 +69,7 @@ int main(int argc , char *argv[]){
     // Padding (A's)
 
     printf("ICMP Packet Prepared (Header + Timestamp + PAyload)\n");
+    printf("Checksum Calculated: 0x%x \n", icmp->checksum);
 
     return 0;
 }
