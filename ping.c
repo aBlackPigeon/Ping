@@ -53,10 +53,7 @@ int main(int argc , char *argv[]){
     icmp->un.echo.id = getpid();
     icmp->un.echo.sequence = sequence++;
 
-    icmp->checksum = compute_checksum(packet,PACKET_SIZE);
-
     char *data = packet + sizeof(struct icmphdr);
-
 
     // insert timestamp
     struct timeval *time_sent = (struct timeval *) data;
@@ -69,6 +66,8 @@ int main(int argc , char *argv[]){
     // struct timeval
     // Padding (A's)
 
+    icmp->checksum = compute_checksum(packet,PACKET_SIZE);
+
     // sending icmp packet
 
     ssize_t bytes_sent = sendto(sockfd,packet,PACKET_SIZE,0,(struct sockaddr*)&dest_addr,sizeof(dest_addr));
@@ -80,6 +79,24 @@ int main(int argc , char *argv[]){
     printf("ICMP Packet Prepared (Header + Timestamp + PAyload)\n");
     printf("Checksum Calculated: 0x%x \n", icmp->checksum);
     printf("Packet sent successfully (%ld bytes)\n", bytes_sent);
+
+    char recv_buffer[1024];
+
+    struct sockaddr_in reply_addr;
+    socklen_t addr_len = sizeof(reply_addr);
+
+    ssize_t bytes_received = recvfrom(sockfd,recv_buffer,sizeof(recv_buffer),0,(struct sockaddr*)&reply_addr,&addr_len);
+    if(bytes_received < 0){
+        perror("recvfrom error");
+        return 1;
+    }
+
+    printf("Packets received (%ld bytes)\n", bytes_received);
+
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET,&reply_addr.sin_addr,ip_str,sizeof(ip_str));
+
+    printf("Reply from %s\n", ip_str);
 
     return 0;
 }
