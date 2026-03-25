@@ -107,6 +107,22 @@ int main(int argc , char *argv[]){
     if(icmp_reply->type == ICMP_ECHOREPLY && icmp->un.echo.id == getpid()){
         printf("Valid Icmp echo replied received\n");
         printf("Sequence: %d\n", icmp_reply->un.echo.sequence);
+
+        // extract timestamp
+
+        struct timeval *time_sent = (struct timeval*)(recv_buffer + ip_header_len + sizeof(struct icmphdr));
+
+        struct timeval time_received;
+        gettimeofday(&time_received,NULL);
+
+        // rtt
+        double rtt;
+        
+        rtt = (time_received.tv_sec - time_sent->tv_sec) * 1000.0;
+        rtt += (time_received.tv_usec - time_sent->tv_usec) / 1000.0;
+
+        printf("RTT: %.2f ms\n", rtt);
+
     }else{
         printf("Ignored Packet\n");
     }
