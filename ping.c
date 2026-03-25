@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/ip.h>
@@ -22,6 +23,16 @@ int main(int argc , char *argv[]){
     char *target_ip = argv[1];
 
     int sockfd = socket(AF_INET,SOCK_RAW,IPPROTO_ICMP);
+
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,&timeout,sizeof(timeout))<0){
+        perror("Setsockopt failed");
+        return 1;
+    }
+
     if(sockfd < 0){
         perror("Socket Creation failed");
         return 1;
@@ -93,6 +104,12 @@ int main(int argc , char *argv[]){
 
     ssize_t bytes_received = recvfrom(sockfd,recv_buffer,sizeof(recv_buffer),0,(struct sockaddr*)&reply_addr,&addr_len);
     if(bytes_received < 0){
+        if(errno == EAGAIN || errno == EWOULDBLOCK){
+            printf("Request timed out\n");
+            sleep(1);
+            continue;
+        }
+
         perror("recvfrom error");
         return 1;
     }
