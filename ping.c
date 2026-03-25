@@ -36,8 +36,8 @@ int main(int argc , char *argv[]){
         return 1;
     }
 
-    printf("Raw Socket Created Successfully\n");
-    printf("Target IP : %s\n", target_ip);
+    //printf("Raw Socket Created Successfully\n");
+    //printf("Target IP : %s\n", target_ip);
 
     // ip Packet
 
@@ -50,11 +50,16 @@ int main(int argc , char *argv[]){
 
     icmp->type = 8;
     icmp->code = 0;
-    icmp->checksum = 0;
+    // icmp->checksum = 0;
     icmp->un.echo.id = getpid();
-    icmp->un.echo.sequence = sequence++;
+    // icmp->un.echo.sequence = sequence++;
 
     char *data = packet + sizeof(struct icmphdr);
+
+    while(1){
+
+        icmp->un.echo.sequence = sequence++;
+        icmp->checksum = 0;
 
     // insert timestamp
     struct timeval *time_sent = (struct timeval *) data;
@@ -66,7 +71,7 @@ int main(int argc , char *argv[]){
     // ICMP HEADER
     // struct timeval
     // Padding (A's)
-
+    
     icmp->checksum = compute_checksum(packet,PACKET_SIZE);
 
     // sending icmp packet
@@ -77,9 +82,9 @@ int main(int argc , char *argv[]){
         return 1;
     }
 
-    printf("ICMP Packet Prepared (Header + Timestamp + PAyload)\n");
-    printf("Checksum Calculated: 0x%x \n", icmp->checksum);
-    printf("Packet sent successfully (%ld bytes)\n", bytes_sent);
+    //printf("ICMP Packet Prepared (Header + Timestamp + PAyload)\n");
+    //printf("Checksum Calculated: 0x%x \n", icmp->checksum);
+    //printf("Packet sent successfully (%ld bytes)\n", bytes_sent);
 
     char recv_buffer[1024];
 
@@ -92,12 +97,12 @@ int main(int argc , char *argv[]){
         return 1;
     }
 
-    printf("Packets received (%ld bytes)\n", bytes_received);
+    //printf("Packets received (%ld bytes)\n", bytes_received);
 
     char ip_str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET,&reply_addr.sin_addr,ip_str,sizeof(ip_str));
 
-    printf("Reply from %s\n", ip_str);
+    //printf("Reply from %s\n", ip_str);
 
     struct iphdr *ip = (struct iphdr*)recv_buffer;
     int ip_header_len = ip->ihl * 4;
@@ -105,8 +110,8 @@ int main(int argc , char *argv[]){
     struct icmphdr *icmp_reply = (struct icmphdr*)(recv_buffer + ip_header_len);
 
     if(icmp_reply->type == ICMP_ECHOREPLY && icmp->un.echo.id == getpid()){
-        printf("Valid Icmp echo replied received\n");
-        printf("Sequence: %d\n", icmp_reply->un.echo.sequence);
+        //printf("Valid Icmp echo replied received\n");
+        //printf("Sequence: %d\n", icmp_reply->un.echo.sequence);
 
         // extract timestamp
 
@@ -121,11 +126,14 @@ int main(int argc , char *argv[]){
         rtt = (time_received.tv_sec - time_sent->tv_sec) * 1000.0;
         rtt += (time_received.tv_usec - time_sent->tv_usec) / 1000.0;
 
-        printf("RTT: %.2f ms\n", rtt);
+        printf("Reply from %s bytes= %ld seq= %d time= %.2f ms\n",
+        ip_str,bytes_received,icmp_reply->un.echo.sequence,rtt);
 
-    }else{
-        printf("Ignored Packet\n");
     }
+
+    sleep(1);
+
+}
 
     return 0;
 }
