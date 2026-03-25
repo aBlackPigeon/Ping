@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/ip_icmp.h>
+#include <netinet/ip.h>
 #include <memory.h>
 #include <sys/time.h>
 #include "include/checksum.h"
@@ -97,6 +98,18 @@ int main(int argc , char *argv[]){
     inet_ntop(AF_INET,&reply_addr.sin_addr,ip_str,sizeof(ip_str));
 
     printf("Reply from %s\n", ip_str);
+
+    struct iphdr *ip = (struct iphdr*)recv_buffer;
+    int ip_header_len = ip->ihl * 4;
+
+    struct icmphdr *icmp_reply = (struct icmphdr*)(recv_buffer + ip_header_len);
+
+    if(icmp_reply->type == ICMP_ECHOREPLY && icmp->un.echo.id == getpid()){
+        printf("Valid Icmp echo replied received\n");
+        printf("Sequence: %d\n", icmp_reply->un.echo.sequence);
+    }else{
+        printf("Ignored Packet\n");
+    }
 
     return 0;
 }
