@@ -7,11 +7,30 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/ip.h>
 #include <memory.h>
+#include <signal.h>
 #include <sys/time.h>
 #include "include/checksum.h"
 
 #define PACKET_SIZE 64
 #define DATA_SIZE (PACKET_SIZE - sizeof(struct icmphdr))
+
+int packet_sent = 0;
+int packet_received = 0;
+
+double min_rtt = 0;
+double max_rtt = 0;
+double total_rtt = 0;
+
+void handle_sigint(int sig){
+    printf("\n\n---Packet Statistics---\n");
+    printf("%d packet transmitted, %d received, %.2f%% packet loss\n",
+    packet_sent,packet_received,((packet_sent-packet_received) * 100.0) / packet_sent);
+
+    if(packet_received > 0){
+        printf("rtt min/avg/max = %.2f/%.2f/%.2f ms\n" , min_rtt,total_rtt/packet_received, max_rtt);
+    }
+    exit(0);
+}
 
 int main(int argc , char *argv[]){
 
@@ -19,6 +38,8 @@ int main(int argc , char *argv[]){
         printf("Usage : %s <IP_ADDRESS> ", argv[0]);
         return 1;
     }
+
+    signal(SIGINT, handle_sigint);
 
     char *target_ip = argv[1];
 
@@ -93,6 +114,8 @@ int main(int argc , char *argv[]){
         return 1;
     }
 
+    packet_sent++;
+
     //printf("ICMP Packet Prepared (Header + Timestamp + PAyload)\n");
     //printf("Checksum Calculated: 0x%x \n", icmp->checksum);
     //printf("Packet sent successfully (%ld bytes)\n", bytes_sent);
@@ -113,6 +136,8 @@ int main(int argc , char *argv[]){
         perror("recvfrom error");
         return 1;
     }
+
+    packet_received++;
 
     //printf("Packets received (%ld bytes)\n", bytes_received);
 
@@ -143,8 +168,15 @@ int main(int argc , char *argv[]){
         rtt = (time_received.tv_sec - time_sent->tv_sec) * 1000.0;
         rtt += (time_received.tv_usec - time_sent->tv_usec) / 1000.0;
 
-        printf("Reply from %s bytes= %ld seq= %d time= %.2f ms\n",
-        ip_str,bytes_received,icmp_reply->un.echo.sequence,rtt);
+        if(rtt < min_rtt) min_rtt = rtt;
+        if(rtt > max_rtt) max_rtt = rtt;
+
+        printf("Reply from %s: bytes=%ld seq=%d time=%.2f ms\n",
+            ip_str,
+            bytes_received,
+            icmp_reply->un.echo.sequence,
+            rtt
+        );
 
     }
 
